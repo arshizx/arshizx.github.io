@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Hybrid: Pegawai & Administrasi</title>
+    <!-- Memuat Tailwind CSS dan Font Inter -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Gaya Dasar dan Variabel Tema */
+        :root {
+            /* Tema Pegawai (Default: Biru) */
+            --pegawai-sidebar-color: #1f3f66; /* Biru Gelap */
+            --pegawai-accent-color: #059669; /* Hijau Accent */
+            --pegawai-bg-content: #f3f6f9; /* Latar Belakang Pucat */
+            
+            /* Tema Administrasi (Merah) */
+            --admin-sidebar-color: #991b1b; /* Merah Marun Gelap */
+            --admin-accent-color: #dc2626; /* Merah Accent */
+            --admin-bg-content: #fef2f2; /* Latar Belakang Merah Pucat */
+
+            /* Default Theme (Pegawai) */
+            --sidebar-color: var(--pegawai-sidebar-color);
+            --accent-color: var(--pegawai-accent-color);
+            --bg-content: var(--pegawai-bg-content);
+            --primary-text: #111827;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-content);
+            color: var(--primary-text);
+            transition: background-color 0.3s ease;
+        }
+
+        /* Kelas Dinamis untuk Tema */
+        .theme-admin {
+            --sidebar-color: var(--admin-sidebar-color);
+            --accent-color: var(--admin-accent-color);
+            --bg-content: var(--admin-bg-content);
+        }
+        
+        /* Sidebar Styles */
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-color);
+            color: white;
+            transition: transform 0.3s ease-in-out, background-color 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Mobile: Sidebar disembunyikan (bergeser ke kiri) */
+        @media (max-width: 767px) {
+            .sidebar {
+                transform: translateX(-250px);
+                position: fixed;
+                height: 100%;
+                z-index: 20;
+                left: 0; 
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .content-area {
+                width: 100%;
+                margin-left: 0;
+            }
+        }
+        
+        /* Desktop: Sidebar terbuka (Anchor ke Kiri) */
+        @media (min-width: 768px) {
+            .sidebar {
+                transform: translateX(0);
+                position: fixed;
+                height: 100%;
+                left: 0; 
+            }
+            .content-area {
+                /* Konten bergeser ke KANAN (margin-left) */
+                margin-left: 250px;
+                width: calc(100% - 250px);
+                position: relative;
+            }
+        }
+
+        /* Navigasi Link Styling */
+        .nav-link {
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            font-size: 1rem;
+            transition: background-color 0.15s ease;
+        }
+        .nav-link:hover, .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.15); /* Transparan putih */
+        }
+        .theme-admin .nav-link:hover, .theme-admin .nav-link.active {
+             background-color: rgba(0, 0, 0, 0.15); /* Transparan hitam untuk kontras */
+        }
+
+        /* Fokus Keyboard (Aksesibilitas - WCAG 2.2 Operable) */
+        .nav-link:focus, button:focus, input:focus, textarea:focus {
+            outline: 3px solid #f1c40f; /* Kuning terang untuk kontras tinggi */
+            outline-offset: -3px;
+        }
+
+        /* Card Konten */
+        .content-card {
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Override Tailwind colors for dynamic accent */
+        .bg-accent { background-color: var(--accent-color); }
+        .text-accent { color: var(--accent-color); }
+        .border-accent { border-color: var(--accent-color); }
+        
+        /* Gaya Toggle Switch (Satu Tombol) */
+        .mode-toggle-container {
+            display: flex;
+            align-items: center;
+            margin-right: 1.5rem; /* Memberi jarak ke ikon profil */
+        }
+        .mode-label {
+            font-weight: 500;
+            color: #333;
+            margin-right: 1rem; /* Jarak antara label dan switch */
+            min-width: 100px; /* Lebar minimum agar label tidak terlalu berdempetan */
+            text-align: right;
+        }
+        .toggle-switch-input {
+            /* Styling kustom untuk toggle agar kontras di header putih */
+            --tw-bg-opacity: 1;
+            background-color: #6b7280; /* Warna Abu-abu saat OFF */
+            border-color: #d1d5db;
+            height: 1.5rem; /* Tinggi */
+            width: 3rem; /* Lebar */
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            position: relative;
+            border-radius: 9999px; /* Penuh bundar */
+            appearance: none;
+            -webkit-appearance: none;
+            outline: none;
+        }
+        .toggle-switch-input:before {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            height: 1rem;
+            width: 1rem;
+            background-color: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .toggle-switch-input:checked {
+            background-color: var(--accent-color); /* Menggunakan warna accent dinamis saat ON */
+        }
+        .toggle-switch-input:checked:before {
+            transform: translateX(1.5rem); /* Pindah ke kanan saat ON */
+        }
+
+    </style>
+    <!-- Simulasi optimasi: Meta tag untuk kontrol caching -->
+    <meta http-equiv="Cache-Control" content="max-age=3600, must-revalidate">
+</head>
+<body class="p-0 m-0">
+    <!-- Overlay untuk Mobile -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black opacity-0 md:hidden z-10 transition-opacity duration-300 pointer-events-none" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar / Navigasi Kiri -->
+    <aside id="sidebar" class="sidebar z-20">
+        <!-- Header Menu dan Hamburger Icon -->
+        <div class="p-4 flex justify-between items-center md:justify-start border-b border-white border-opacity-30">
+            <h2 class="text-xl font-bold" role="heading" aria-level="2" id="sidebar-title">MENU PEGAWAI</h2>
+            <button id="close-btn" class="text-white text-2xl md:hidden" onclick="toggleSidebar()" aria-label="Tutup Menu Sidebar">
+                &times;
+            </button>
+        </div>
+
+        <!-- Menu Kontainer -->
+        <div class="flex-grow py-4" role="navigation">
+             <!-- Menu Pegawai (Default) -->
+            <nav id="pegawai-menu">
+                <a href="#" class="nav-link active" onclick="activateLink(this)" data-page="profil" aria-current="page" aria-label="Profil Pegawai">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    Profil Pegawai
+                </a>
+                <a href="#" class="nav-link" onclick="activateLink(this)" data-page="dokumen" aria-label="Dokumen">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Dokumen
+                </a>
+                <a href="#" class="nav-link" onclick="activateLink(this)" data-page="agenda" aria-label="Agenda Rapat">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    Agenda Rapat
+                </a>
+                <a href="#" class="nav-link" onclick="activateLink(this)" data-page="cuti" aria-label="Ajukan Cuti">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Ajukan Cuti
+                </a>
+            </nav>
+
+            <!-- Menu Administrasi (Tersembunyi Awalnya) -->
+            <nav id="admin-menu" class="hidden">
+                 <a href="#" class="nav-link active" onclick="activateLink(this)" data-page="dashboard" aria-current="page" aria-label="Dashboard Admin">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    Dashboard Admin
+                </a>
+                <a href="#" class="nav-link" onclick="activateLink(this)" data-page="pegawai_admin" aria-label="Kelola Pegawai">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20h-5.356A3 3 0 005 18v-2a3 3 0 013-3h8a3 3 0 013 3v2zM9 9a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1H10a1 1 0 01-1-1V9z"></path></svg>
+                    Kelola Pegawai
+                </a>
+                <a href="#" class="nav-link" onclick="activateLink(this)" data-page="cuti_approval" aria-label="Persetujuan Cuti">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.018A9.76 9.76 0 0012 2C7.38 2 3 6.38 3 12s4.38 10 10 10 10-4.38 10-10-4.38-9.982-10-9.982z"></path></svg>
+                    Persetujuan Cuti
+                </a>
+                <a href="#" class="nav-link" onclick="activateLink(this)" data-page="laporan" aria-label="Laporan Keuangan">
+                    <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055zM12 21a9.004 9.004 0 008.281-5H12v5z"></path></svg>
+                    Laporan & Data
+                </a>
+            </nav>
+        </div>
+        <!-- Footer Navigasi -->
+        <div class="p-4 text-xs text-white text-opacity-70">
+            <p id="footer-version">Pegawai Version 1.0</p>
+        </div>
+    </aside>
+
+    <!-- Area Konten Utama -->
+    <div id="content-area" class="content-area min-h-screen p-0 flex flex-col">
+        <!-- Header Konten Atas -->
+        <header class="bg-white p-4 shadow-md flex justify-between items-center sticky top-0 z-10">
+            <div class="flex items-center">
+                <!-- Tombol Hamburger (Hanya Tampil di Mobile) -->
+                <button id="open-btn" class="text-xl md:hidden mr-3 text-gray-700" onclick="toggleSidebar()" aria-label="Buka Menu Sidebar">
+                    &#9776;
+                </button>
+                <!-- Title Portal -->
+                <h1 class="text-lg font-semibold text-gray-700" role="heading" aria-level="1" id="portal-title">
+                    PORTAL KANTOR DIGITAL
+                </h1>
+            </div>
+            
+            <!-- Toggle Role (Satu Tombol) dan Ikon Profil Kanan Atas -->
+            <div class="flex items-center space-x-3">
+                 <!-- Kontainer Toggle Mode (Satu Tombol) -->
+                <div class="mode-toggle-container hidden sm:flex">
+                    <span class="mode-label" id="role-text">Mode Pegawai</span>
+                    <input type="checkbox" id="roleToggle" class="toggle-switch-input" role="switch" onchange="toggleRole(this.checked)" aria-checked="false" aria-label="Beralih antara Mode Pegawai dan Administrasi">
+                </div>
+
+                <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center border-2 border-accent" aria-label="Ikon Profil Pengguna">
+                    <svg class="w-6 h-6 text-accent" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                </div>
+            </div>
+        </header>
+
+        <!-- Body Konten (Dashboard Utama) -->
+        <main class="flex-grow p-4 md:p-8" id="main-content" role="main">
+            <!-- Kontainer Konten Dinamis -->
+            <div id="dynamic-content">
+                
+                <!-- KONTEN PEGAWAI (DEFAULT) -->
+                <div id="pegawai-content">
+                     <!-- Header Card Utama -->
+                    <div class="flex flex-col md:flex-row items-center justify-between p-6 rounded-lg content-card bg-green-200 border-l-4 border-accent mb-8 shadow-inner">
+                        <div class="flex items-center space-x-4 mb-4 md:mb-0">
+                            <div class="w-16 h-16 rounded-full bg-blue-400 flex items-center justify-center text-white" aria-label="Foto Profil Starina">
+                                <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                            </div>
+                            <div>
+                                <p class="text-xl md:text-2xl font-bold text-gray-800">Selamat Datang, Starina!</p>
+                                <p class="text-sm text-gray-600">Divisi Administrasi</p>
+                            </div>
+                        </div>
+                        <button class="w-full md:w-auto bg-accent hover:opacity-90 text-white font-bold py-3 px-6 rounded-full transition duration-150 shadow-lg" aria-label="Tombol Ajukan Cuti">
+                            Ajukan Cuti
+                        </button>
+                    </div>
+
+                    <!-- Area Tampilan Konten (Profil Pegawai) -->
+                    <section id="page-profil" class="content-page">
+                        <div class="bg-white p-6 content-card">
+                            <h2 class="text-xl font-bold text-gray-800 mb-4" role="heading" aria-level="2">Profil Pegawai:</h2>
+                            <div class="space-y-3 text-gray-700">
+                                <p>Nama: <span class="font-semibold">Starina</span></p>
+                                <p>Jabatan: <span class="font-semibold">Staf Administrasi</span></p>
+                                <p>No. Telephone: <span class="font-semibold">08112345678</span></p>
+                                <h3 class="font-bold pt-2" role="heading" aria-level="3">Alamat:</h3>
+                                <p>JL. Abdullah Daeng Sirua No. 11, Panakkukang, Makassar</p>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <!-- Placeholder untuk Halaman Lain (Pegawai) -->
+                    <section id="page-dokumen" class="content-page hidden">
+                        <div class="bg-white p-6 content-card">
+                            <h2 class="text-xl font-bold mb-4">Dokumen Kantor</h2>
+                            <p>Daftar dokumen tersedia di sini.</p>
+                        </div>
+                    </section>
+                    <section id="page-agenda" class="content-page hidden">
+                        <div class="bg-white p-6 content-card">
+                            <h2 class="text-xl font-bold mb-4">Agenda Rapat</h2>
+                            <p>Kalender dan jadwal rapat mingguan.</p>
+                        </div>
+                    </section>
+                    <section id="page-cuti" class="content-page hidden">
+                        <div class="bg-white p-6 content-card">
+                            <h2 class="text-xl font-bold mb-4">Formulir Ajukan Cuti</h2>
+                            <p>Formulir pengajuan cuti akan berada di halaman ini.</p>
+                        </div>
+                    </section>
+
+                </div>
+
+                <!-- KONTEN ADMINISTRASI (TERSEMBUNYI) -->
+                <div id="admin-content" class="hidden">
+                     <!-- Header Card Utama Admin -->
+                    <div class="flex flex-col md:flex-row items-center justify-between p-6 rounded-lg content-card bg-red-200 border-l-4 border-accent mb-8 shadow-inner">
+                        <div class="flex items-center space-x-4 mb-4 md:mb-0">
+                             <div class="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center text-white" aria-label="Foto Profil Admin">
+                                <svg class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path></svg>
+                            </div>
+                            <div>
+                                <p class="text-xl md:text-2xl font-bold text-red-900">Selamat Datang, Admin!</p>
+                                <p class="text-sm text-red-700">Akses Penuh Level 5</p>
+                            </div>
+                        </div>
+                        <button class="w-full md:w-auto bg-accent hover:opacity-90 text-white font-bold py-3 px-6 rounded-full transition duration-150 shadow-lg" aria-label="Tombol Kelola Semua Pengajuan Cuti">
+                            Kelola Cuti (12 Menunggu)
+                        </button>
+                    </div>
+                    
+                    <!-- Area Tampilan Konten (Dashboard Admin) -->
+                    <section id="page-dashboard" class="content-page">
+                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="bg-white p-6 content-card">
+                                <h2 class="text-lg font-bold text-accent mb-4">Ringkasan Tugas</h2>
+                                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                    <li>Persetujuan Cuti: <span class="font-semibold text-accent">12</span></li>
+                                    <li>Verifikasi Dokumen Baru: <span class="font-semibold">3</span></li>
+                                    <li>Laporan Bulanan Mendatang: <span class="font-semibold">5 hari</span></li>
+                                    <li class="list-none pt-2">
+                                         <a href="#" class="text-sm text-accent hover:underline">Lihat Semua Tugas</a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="bg-white p-6 content-card">
+                                <h2 class="text-lg font-bold text-accent mb-4">Profil Administrator:</h2>
+                                <div class="space-y-3 text-gray-700 text-sm">
+                                    <p>Nama: <span class="font-semibold">Admin Pusat</span></p>
+                                    <p>Jabatan: <span class="font-semibold">Kepala Divisi TI</span></p>
+                                    <p>No. Telephone: <span class="font-semibold">0800-ADMIN</span></p>
+                                    <h3 class="font-bold pt-2" role="heading" aria-level="3">Lokasi Server:</h3>
+                                    <p>Data Center Utama, Makassar</p>
+                                </div>
+                            </div>
+                            <div class="bg-white p-6 content-card">
+                                <h2 class="text-lg font-bold text-accent mb-4">Akses Cepat</h2>
+                                <button class="w-full bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-2 px-4 rounded-md mb-2">Verifikasi Data Keuangan</button>
+                                <button class="w-full bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-2 px-4 rounded-md">Atur Hak Akses Pegawai</button>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <!-- Placeholder untuk Halaman Lain (Admin) -->
+                    <section id="page-pegawai_admin" class="content-page hidden">
+                        <div class="bg-white p-6 content-card">
+                            <h2 class="text-xl font-bold mb-4">Kelola Data Pegawai</h2>
+                            <p>Daftar lengkap dan pengaturan akses pegawai.</p>
+                        </div>
+                    </section>
+                    <section id="page-cuti_approval" class="content-page hidden">
+                         <div class="bg-white p-6 content-card">
+                            <h2 class="text-xl font-bold mb-4">Persetujuan Cuti & Absensi</h2>
+                            <p>Tabel persetujuan dan riwayat cuti pegawai.</p>
+                        </div>
+                    </section>
+                    <section id="page-laporan" class="content-page hidden">
+                        <div class="bg-white p-6 content-card">
+                            <h2 class="text-xl font-bold mb-4">Laporan & Data Analytics</h2>
+                            <p>Dashboard analitik dan laporan bulanan.</p>
+                        </div>
+                    </section>
+
+                </div>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="p-3 text-center text-xs text-gray-500 border-t mt-auto">
+            &copy; 2025 Portal Kantor Digital
+        </footer>
+    </div>
+
+    <script>
+        // --- LOGIKA UTAMA ---
+
+        const sidebar = document.getElementById('sidebar');
+        const contentPages = document.querySelectorAll('.content-page');
+        const body = document.body;
+        
+        // Elemen Konten yang Berganti
+        const pegawaiMenu = document.getElementById('pegawai-menu');
+        const adminMenu = document.getElementById('admin-menu');
+        const pegawaiContent = document.getElementById('pegawai-content');
+        const adminContent = document.getElementById('admin-content');
+        const sidebarTitle = document.getElementById('sidebar-title');
+        const portalTitle = document.getElementById('portal-title');
+        const footerVersion = document.getElementById('footer-version');
+        
+        // Toggle Switch Elements
+        const roleToggleCheckbox = document.getElementById('roleToggle');
+        const roleText = document.getElementById('role-text');
+
+
+        // State untuk melacak mode aktif (false = Pegawai, true = Administrasi)
+        let is_admin_mode = false;
+
+
+        // Fungsi untuk mengaktifkan link dan menampilkan konten
+        function activateLink(clickedLink) {
+            event.preventDefault(); 
+            
+            // 1. Kelola Kelas Aktif Navigasi (Hanya di menu yang aktif)
+            const activeMenu = is_admin_mode ? adminMenu : pegawaiMenu;
+
+            activeMenu.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+                link.removeAttribute('aria-current');
+            });
+            clickedLink.classList.add('active');
+            clickedLink.setAttribute('aria-current', 'page');
+            
+            // 2. Tampilkan Halaman yang Sesuai
+            const pageId = clickedLink.getAttribute('data-page');
+            
+            // Sembunyikan semua halaman yang mungkin aktif
+            document.querySelectorAll('#dynamic-content .content-page').forEach(page => {
+                page.classList.add('hidden');
+            });
+
+            // Tampilkan halaman target
+            const targetPage = document.getElementById('page-' + pageId);
+            if (targetPage) {
+                targetPage.classList.remove('hidden');
+            }
+
+
+            // 3. Tutup Sidebar di Mobile (setelah memilih menu)
+            if (window.innerWidth < 768) {
+                toggleSidebar();
+            }
+        }
+
+        // Fungsi untuk Beralih Peran (Toggle Switch)
+        function toggleRole(isChecked) {
+            is_admin_mode = isChecked;
+
+            // Update ARIA
+            roleToggleCheckbox.setAttribute('aria-checked', is_admin_mode);
+
+            if (is_admin_mode) {
+                // --- SWITCH TO ADMINISTRASI MODE (MERAH) ---
+                body.classList.add('theme-admin');
+                roleText.textContent = 'Mode Administrasi';
+                sidebarTitle.textContent = 'MENU ADMINISTRASI';
+                portalTitle.textContent = 'PORTAL ADMINISTRASI PUSAT';
+                footerVersion.textContent = 'Administrasi Version 1.0';
+
+                pegawaiMenu.classList.add('hidden');
+                adminMenu.classList.remove('hidden');
+                
+                pegawaiContent.classList.add('hidden');
+                adminContent.classList.remove('hidden');
+
+                // Auto-aktifkan halaman default Administrasi (Dashboard)
+                document.querySelector('#admin-menu .nav-link').click();
+
+            } else {
+                // --- SWITCH TO PEGAWAI MODE (BIRU/HIJAU) ---
+                body.classList.remove('theme-admin');
+                roleText.textContent = 'Mode Pegawai';
+                sidebarTitle.textContent = 'MENU PEGAWAI';
+                portalTitle.textContent = 'PORTAL KANTOR DIGITAL';
+                footerVersion.textContent = 'Pegawai Version 1.0';
+
+                adminMenu.classList.add('hidden');
+                pegawaiMenu.classList.remove('hidden');
+                
+                adminContent.classList.add('hidden');
+                pegawaiContent.classList.remove('hidden');
+
+                 // Auto-aktifkan halaman default Pegawai (Profil)
+                document.querySelector('#pegawai-menu .nav-link').click();
+            }
+        }
+
+        // Logika Sidebar Mobile
+        const overlay = document.getElementById('sidebar-overlay');
+        function toggleSidebar() {
+            sidebar.classList.toggle('open');
+            if (sidebar.classList.contains('open')) {
+                overlay.classList.remove('opacity-0', 'pointer-events-none');
+                overlay.classList.add('opacity-50');
+                document.body.style.overflow = 'hidden'; 
+            } else {
+                overlay.classList.remove('opacity-50');
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+                document.body.style.overflow = '';
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('opacity-50');
+                overlay.classList.add('opacity-0', 'pointer-events-none');
+                document.body.style.overflow = '';
+            }
+        });
+
+        // Autoload halaman default saat dibuka (Profil Pegawai)
+        window.onload = function() {
+            // Set default mode: Pegawai (unchecked)
+            roleToggleCheckbox.checked = false;
+            toggleRole(false);
+        };
+
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
